@@ -8,16 +8,19 @@ LikeMinds is a lightweight web tool that helps researchers on [Bluesky](https://
 - Recommend 3 users with the highest overlap
 - Simple web UI to view and follow suggestions
 
+## Usage
+- clone repo `git clone git@github.com:CompMotifs/LikeMinds.git`
+- build environment `uv sync`
+- run `uv run streamlit run src/web/app.py`
+
 ## Ideas
 
 - do it as a command line tool
 - base it on a conference feed
 -
 
-## Development
 
-- clone code `git clone git@github.com:CompMotifs/LikeMinds.git`
-- build environment `uv sync`
+
 
 
 ## Project Structure 
