@@ -7,13 +7,9 @@ from likeminds.api.bluesky_api import (
     extract_post_likers,
     get_multiple_profiles_likes_df,
     get_unfollowed_users,
+    extract_post_likers,
 )
 from likeminds.recommendation.recommender_word2vec import get_similar_users_dataframe
-
-from likeminds.api.bluesky_api import (
-    extract_post_likers,
-    get_multiple_profiles_likes_df,
-)
 
 
 def seed_input_check(input_text: str) -> dict:

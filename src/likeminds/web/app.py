@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 
 from likeminds.api.bluesky_api import ( 
-    get_unfollowed_users
+    get_unfollowed_users,
 )
 
 from likeminds.web.app_functions import (
@@ -129,15 +129,13 @@ def main():
 
         if matching_option == "Like overlap":
             st.info("Finding like overlap...")
+
             reccs = rank_users_by_post_overlap(
                 profile_id=user_handle,
                 liked_posts_df=filtered_df
             )
 
             st.info(reccs)
-
-        
-
 
 if __name__ == "__main__":
     main()
