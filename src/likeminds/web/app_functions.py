@@ -55,7 +55,7 @@ def get_seed_accounts(url):
     """
     Return handles of users who liked the linked post.
     """
-    liker_dict = extract_post_likers(post_url=url, max_likers=100, rate_limit_delay=1)
+    liker_dict = extract_post_likers(post_url=url, max_likers=1000, rate_limit_delay=1)
     liker_handles = []
     for user in liker_dict:
         if "handle" in user and user["handle"]:
@@ -65,7 +65,7 @@ def get_seed_accounts(url):
 
 def likes_from_handles(list_of_handles):
     multiple_likes = get_multiple_profiles_likes_df(
-        profile_ids=list_of_handles, total_posts_per_profile=100, include_text=True
+        profile_ids=list_of_handles, total_posts_per_profile=1000, include_text=True
     )
     return multiple_likes[["profile_id", "url", "text"]]
 

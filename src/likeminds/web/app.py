@@ -128,14 +128,17 @@ def main():
         st.info("Finding closest matching fingerprints...")
 
         if matching_option == "Like overlap":
-            st.info("Finding like overlap...")
-
-            reccs = rank_users_by_post_overlap(
+            st.info("Ranking users by like overlap...")
+            # Call the updated function; it returns a DataFrame with match scores
+            reccs_df = rank_users_by_post_overlap(
                 profile_id=user_handle,
                 liked_posts_df=filtered_df
             )
-
-            st.info(reccs)
+            if not reccs_df.empty:
+                st.subheader("Recommended Matches (ordered by match score)")
+                st.dataframe(reccs_df)
+            else:
+                st.error("No matching profiles found.")
 
 if __name__ == "__main__":
     main()
