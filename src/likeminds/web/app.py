@@ -100,6 +100,16 @@ def main():
 
         st.dataframe(filtered_df)
 
+        removed_df = likes_df[~likes_df['url'].isin(filtered_df['url'])]
+
+        st.subheader("Posts Removed by Filtering")
+        if not removed_df.empty:
+            st.write("The following posts were removed:")
+            # Display only the "text" column for each removed post
+            st.dataframe(removed_df[['text']])
+        else:
+            st.info("No posts were removed based on the current filter.")
+
         st.info("Generating like fingerprints for user and candidates...")
 
         st.info("Finding closest matching fingerprints...")
