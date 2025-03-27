@@ -17,14 +17,15 @@ import pandas as pd
 # )
 
 def main():
-    st.title("LikeMinds: Find Your Research Circle")
+    st.title("LikeMinds: Find Your Circle")
     st.markdown(
-        "Discover potential collaborators by comparing your liked posts with others, "
+        "Discover potential connections by comparing your liked posts with others, "
         "focusing on content-based filters."
     )
     
     # Get user input
     user_handle = st.text_input("Enter your Bluesky handle:")
+
     seed_input = st.text_area(
         "Enter a seed post URL (one post) or a comma-separated list of handles "
         "to find matches among (e.g. conference attendees):"
@@ -42,6 +43,24 @@ def main():
         st.info("Fetching your liked posts...")
         # Your logic here can use filter_option to determine which filtering function to apply.
         st.write(f"Using filter: {filter_option}")
+        st.info("Generating DataFrame for user's liked posts...")
+        st.info("Checking if seed input is post or handles")
+        seed_is_post = True
+        # function to check
+
+        if seed_is_post:
+            st.info("Identifying accounts who liked the seed post...")
+
+        st.info("Excluding accounts already followed...")
+
+        st.info("Adding user IDs and liked posts for candidate accounts...")
+
+        st.info("Including filtering columns (e.g., 'is_scientific')...")
+
+        st.info("Generating like fingerprints for user and candidates...")
+
+        st.info("Finding closest matching fingerprints...")
+
 
         # Continue with the fetching, filtering, and recommendation process.
         # # Generate user's liked posts DataFrame
