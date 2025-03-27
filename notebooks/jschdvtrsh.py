@@ -7,12 +7,109 @@ Original file is located at
     https://colab.research.google.com/drive/1yxhkk6BSYDeLEKNCmXGffl2XcmSxKEc8
 """
 
+def extract_post_likers(post_url, max_likers=100, rate_limit_delay=1):
+    """
+    Extract profiles that liked a specific post
+
+    Parameters:
+    post_url (str): URL or URI of the post
+    max_likers (int): Maximum number of likers to extract
+    rate_limit_delay (float): Time to wait between requests in seconds
+
+    Returns:
+    list: List of dictionaries with liker information (did, handle, displayName)
+    """
+    # Parse the post URL to get URI components
+    if post_url.startswith("https://bsky.app/profile/"):
+        # Format: https://bsky.app/profile/{handle}/post/{rkey}
+        parts = post_url.split("/")
+        if len(parts) < 6:
+            raise ValueError("Invalid post URL format")
+
+        handle = parts[4]
+        rkey = parts[6]
+
+        # Resolve handle to DID
+        did = get_did_from_handle(handle)
+
+        # Construct URI
+        uri = f"at://{did}/app.bsky.feed.post/{rkey}"
+    elif post_url.startswith("at://"):
+        # Already in AT URI format
+        uri = post_url
+    else:
+        raise ValueError("Unsupported URL format. Use https://bsky.app/profile/... or at://...")
+
+    # Get the post's record
+    post_response = requests.get(
+        "https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread",
+        params={"uri": uri, "depth": 0}
+    )
+
+    if not post_response.ok:
+        raise Exception(f"Failed to get post: {post_response.status_code}")
+
+    # Extract information from post
+    post_data = post_response.json()
+    if "thread" not in post_data or "post" not in post_data["thread"]:
+        raise Exception("Invalid post data returned")
+
+    post = post_data["thread"]["post"]
+    post_cid = post.get("cid")
+
+    if not post_cid:
+        raise Exception("Could not find post CID")
+
+    # Get likes for the post
+    cursor = None
+    likers = []
+
+    while len(likers) < max_likers:
+        params = {
+            "uri": uri,
+            "cid": post_cid,
+            "limit": min(100, max_likers - len(likers))
+        }
+
+        if cursor:
+            params["cursor"] = cursor
+
+        likes_response = requests.get(
+            "https://public.api.bsky.app/xrpc/app.bsky.feed.getLikes",
+            params=params
+        )
+
+        if not likes_response.ok:
+            raise Exception(f"Failed to get likes: {likes_response.status_code}")
+
+        likes_data = likes_response.json()
+
+        # Extract liker profiles
+        for like in likes_data.get("likes", []):
+            if "actor" in like:
+                actor = like["actor"]
+                likers.append({
+                    "did": actor.get("did", ""),
+                    "handle": actor.get("handle", ""),
+                    "displayName": actor.get("displayName", "")
+                })
+
+        # Check if there are more likes
+        cursor = likes_data.get("cursor")
+        if not cursor or len(likes_data.get("likes", [])) == 0:
+            break
+
+        # Respect rate limits
+        time.sleep(rate_limit_delay)
+
+    return likers[:max_likers]
+
 def get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile, include_text=False, max_workers=5):
     """
     Get likes from multiple Bluesky profiles and return as a combined pandas DataFrame
 
     Parameters:
-    profile_ids (list): List of Bluesky handles or DIDs
+    profile_ids (list): List of Bluesky handles, DIDs, or dicts with 'did' and 'handle' keys
     total_posts_per_profile (int): Number of posts to extract per profile
     include_text (bool): Whether to include post text (default False)
     max_workers (int): Maximum number of concurrent requests (default 5)
@@ -23,7 +120,15 @@ def get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile, include
     all_dfs = []
 
     # Function to process a single profile
-    def process_profile(profile_id):
+    def process_profile(profile_entry):
+        # Handle different input formats
+        if isinstance(profile_entry, dict):
+            profile_id = profile_entry.get('did')
+            profile_handle = profile_entry.get('handle')
+        else:
+            profile_id = profile_entry
+            profile_handle = None
+
         config = {
             "profile_id": profile_id,
             "total_posts": total_posts_per_profile,
@@ -34,8 +139,10 @@ def get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile, include
 
         try:
             df = get_likes_df(config)
-            # Add profile_id column
+            # Add profile info columns
             df["profile_id"] = profile_id
+            if profile_handle:
+                df["profile_handle"] = profile_handle
             return df
         except Exception as e:
             print(f"Error processing {profile_id}: {e}")
@@ -49,12 +156,16 @@ def get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile, include
     combined_df = pd.concat(results, ignore_index=True)
 
     # Select only the needed columns
-    if include_text:
-        columns = ["profile_id", "uri", "url", "author", "author_handle", "liked_at", "text_preview"]
-    else:
-        columns = ["profile_id", "uri", "url", "author", "author_handle", "liked_at"]
+    base_columns = ["profile_id", "uri", "url", "author", "author_handle", "liked_at"]
+    if "profile_handle" in combined_df.columns:
+        base_columns.insert(1, "profile_handle")
+    if include_text and "text_preview" in combined_df.columns:
+        base_columns.append("text_preview")
 
-    return combined_df[columns]
+    # Filter to only include columns that exist
+    existing_columns = [col for col in base_columns if col in combined_df.columns]
+
+    return combined_df[existing_columns]
 
 import requests
 import json
@@ -242,10 +353,15 @@ def get_post_details(post_uris):
 
     return all_posts
 
+post_url = "https://bsky.app/profile/cogcompneuro.bsky.social/post/3ljpt7loxc22n"  # Example post
+likers = extract_post_likers(post_url, max_likers=5)
+
+likers
+
 # Example for a single profile
 single_config = {
     "profile_id": "achterbrain.bsky.social",  # Example handle
-    "total_posts": 10,
+    "total_posts": 5,
     "include_text": True,
     "text_preview_only": False,
     "preview_length": 30,
@@ -253,19 +369,28 @@ single_config = {
 }
 
 try:
+    # Get likers of a specific post example
+    post_url = "https://bsky.app/profile/cogcompneuro.bsky.social/post/3ljpt7loxc22n"  # Example post
+    likers = extract_post_likers(post_url, max_likers=5)
+    print(f"\nExtracted {len(likers)} likers for post: {post_url}")
+    for liker in likers[:3]:
+        print(f"DID: {liker['did']}, Handle: {liker['handle']}, Name: {liker['displayName']}")
+
+    # Use those likers to extract their likes
+    print("\nExtracting likes from those users...")
+    combined_df = get_multiple_profiles_likes_df(likers[:2], total_posts_per_profile=2)
+    print(f"Successfully extracted {len(combined_df)} likes from {min(2, len(likers))} profiles")
+    print("Preview of data:")
+    if not combined_df.empty:
+        print(combined_df[["profile_id", "profile_handle", "url"]].head())
+
     # Single profile example
+    print("\nSingle profile example:")
     df = get_likes_df(single_config)
     print(f"Successfully extracted {len(df)} likes from a single profile")
-    print("\nDataFrame columns:", df.columns.tolist())
-    print("\nPreview of single profile data:")
-    print(df[["url", "liked_at", "text_preview"]].head(3))
+    print("Preview of data:")
+    print(df[["url", "liked_at", "text_preview"]].head(2))
 
-    # Multiple profiles example
-    profile_ids = ["achterbrain.bsky.social", "compmotifs.bsky.social"]
-    combined_df = get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile=5, include_text=True)
-    print(f"\nSuccessfully extracted {len(combined_df)} likes from {len(profile_ids)} profiles")
-    print("\nPreview of combined profile data:")
-    print(combined_df[["profile_id", "url", "liked_at"]].head(5))
 except Exception as e:
     print(f"Error: {e}")
 
