@@ -92,7 +92,7 @@ def get_user_interests(df, user_id):
         'click', 'tweet', 'post', 'like', 'share', 'follow', 'dm',
         'retweet', 'reply', 'comment', 'thread', 'timeline', 'feed',
         'pic', 'photo', 'image', 'video', 'bio', 'don', 'didn', 'll',
-        've', 're', 'amp', 'gt', 'lt', '10'
+        've', 're', 'amp', 'gt', 'lt', '10', 10
     ]
     
     # Combine with English stopwords

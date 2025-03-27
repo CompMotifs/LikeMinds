@@ -5,6 +5,7 @@ import pandas as pd
 
 from likeminds.api.bluesky_api import ( 
     get_unfollowed_users,
+    check_handle_exists
 )
 
 from likeminds.web.app_functions import (
@@ -52,10 +53,16 @@ def main():
     )
     
     # user_handle = st.text_input("Enter your Bluesky handle:", placeholder="@")
-    user_handle = st.text_input("Enter your Bluesky handle:", value="", placeholder="@")
+    user_handle = st.text_input("Enter your full Bluesky handle:", value="", placeholder="you.bsky.social")
+
+    # user_check = check_handle_exists(user_handle)
+    # if user_check.get("success", False):
+    #     st.error(f"Handle check failed: {user_check.get('message', 'Unknown error')}")
+    #     st.stop()
+
     # todo add check handle exists
-    if ".bsky.social" not in user_handle:
-        user_handle = f"{user_handle}.bsky.social"
+    # if ".bsky.social" not in user_handle:
+    #     user_handle = f"{user_handle}.bsky.social"
 
     seed_input = st.text_area(
         "Enter a seed post URL (one post) or a comma-separated list of handles "
@@ -65,19 +72,32 @@ def main():
     # Dropdown for potential filters
     filter_option = st.selectbox(
         "Select a content filter:",
-        ["Scientific posts", "Music posts", "All posts"]
+        [
+         "Scientific posts", 
+        #  "Music posts", 
+         "All posts"
+         ]
     )
     
     matching_option = st.selectbox(
         "Select a content filter:",
-        ["Like overlap", "Word2Vec", "SBert"]
+        [
+            "Word2Vec", 
+            "Like overlap", 
+            # "SBert"
+            ]
     )
 
     top_n = st.number_input("Number of recommendations", min_value=1, max_value=10, value=3)
 
     if st.button("Find Matches") and user_handle:
 
-        st.info("Checking if seed input is post or handles")
+        if not check_handle_exists(user_handle):
+            st.error("Handle does not exist. Please enter a valid Bluesky handle.")
+            st.stop()
+
+
+        st.info("Checking if seed input is post or handles...")
         seed_result = seed_input_check(seed_input)
         if not seed_result["valid"]:
             st.error(seed_result["error"])
@@ -89,28 +109,15 @@ def main():
             seed_accounts = get_seed_accounts(seed_result["value"])
         else: 
             seed_accounts = seed_result["value"]
-        st.info(seed_accounts)
-            
 
-        # todo remove
-        # seed_accounts = seed_accounts[:3]
+        st.info("Removing users already followed...")
+        seed_accounts = get_unfollowed_users(user_handle, seed_accounts)
 
         all_handles = [user_handle] + seed_accounts
 
-        st.info("Fetching all liked posts...")
-
-        st.info(all_handles)
-
-        likes_df = likes_from_handles(all_handles)
-
-        # Your logic here can use filter_option to determine which filtering function to apply.
-        # st.write(f"Using filter: {filter_option}")
-        st.dataframe(likes_df)
-
-        # Todo: add filter of users 
-        st.info("Excluding accounts already followed...")
-        
-        # st.info("Adding user IDs and liked posts for candidate accounts...")
+        # st.info("Fetching all liked posts...")
+        with st.spinner("Fetching all liked posts..."):
+            likes_df = likes_from_handles(all_handles)
 
         if filter_option == "Scientific posts":
             st.info("Keeping only scientific posts...")
@@ -121,21 +128,18 @@ def main():
             st.info("Keeping all posts...")
             filtered_df = likes_df
 
-        st.dataframe(filtered_df)
+        # removed_df = likes_df[~likes_df['url'].isin(filtered_df['url'])]
 
-        removed_df = likes_df[~likes_df['url'].isin(filtered_df['url'])]
+        # st.subheader("Posts Removed by Filtering")
 
-        st.subheader("Posts Removed by Filtering")
-        
+        # if not removed_df.empty:
+        #     st.write("The following posts were removed:")
+        #     # Display only the "text" column for each removed post
+        #     st.dataframe(removed_df[['text']])
+        # else:
+        #     st.info("No posts were removed based on the current filter.")
 
-        if not removed_df.empty:
-            st.write("The following posts were removed:")
-            # Display only the "text" column for each removed post
-            st.dataframe(removed_df[['text']])
-        else:
-            st.info("No posts were removed based on the current filter.")
-
-        st.info("Finding closest matching fingerprints...")
+        st.info("Finding matches...")
 
         if matching_option == "Like overlap":
             st.info("Ranking users by like overlap...")
@@ -152,7 +156,6 @@ def main():
             
         elif matching_option == "Word2Vec":
             # Call the Word2Vec-based function; it returns a DataFrame with similar users and their similarity scores
-            st.dataframe(filtered_df)
             similar_users_df = get_similar_users_dataframe(
                 df=filtered_df, 
                 reference_user=user_handle, 
@@ -160,7 +163,7 @@ def main():
             )
 
             if not similar_users_df.empty:
-                st.subheader("Recommended Matches (Word2Vec/TF-IDF based)")
+                st.subheader("Recommended Matches")
                 st.dataframe(similar_users_df)
             else:
                 st.error("No matching profiles found.")
