@@ -418,6 +418,87 @@ def extract_post_likers(post_url: str, max_likers: int = 100, rate_limit_delay: 
     return likers[:max_likers]
 
 
+def get_unfollowed_users(reference_user: str, user_list: List[Union[str, Dict[str, str]]]) -> List[Union[str, Dict[str, str]]]:
+    """
+    Filter a list of users to include only those not followed by the reference user.
+    
+    Args:
+        reference_user: The handle or DID of the reference user
+        user_list: List of user handles, DIDs, or dictionaries with 'did' and 'handle' keys
+        
+    Returns:
+        list: Filtered list of users not followed by the reference user, in the same format as input
+        
+    Raises:
+        Exception: If API requests fail
+    """
+    # First, standardize the user_list to include DIDs
+    standardized_users = []
+    for user in user_list:
+        if isinstance(user, dict):
+            if "did" in user:
+                standardized_users.append(user)
+            elif "handle" in user:
+                # Convert handle to DID and create new dict
+                did = get_did_from_handle(user["handle"])
+                standardized_users.append({"did": did, "handle": user["handle"]})
+        else:
+            # String input - could be handle or DID
+            if user.startswith("did:"):
+                standardized_users.append({"did": user})
+            else:
+                # Convert handle to DID
+                did = get_did_from_handle(user)
+                standardized_users.append({"did": did, "handle": user})
+    
+    # Get the reference user's DID if it's a handle
+    ref_did = reference_user if reference_user.startswith("did:") else get_did_from_handle(reference_user)
+    
+    # Initialize cursor and followed accounts list
+    cursor = None
+    followed_dids = set()
+    
+    # Get the list of accounts the reference user follows
+    while True:
+        params = {
+            "actor": ref_did,
+            "limit": 100
+        }
+        if cursor:
+            params["cursor"] = cursor
+        
+        response = requests.get(
+            "https://public.api.bsky.app/xrpc/app.bsky.graph.getFollows",
+            params=params
+        )
+        
+        if not response.ok:
+            raise Exception(f"Failed to get follows: {response.status_code}")
+        
+        follows_data = response.json()
+        
+        # Extract DIDs of followed accounts
+        for follow in follows_data.get("follows", []):
+            followed_dids.add(follow.get("did"))
+        
+        # Check if there are more follows
+        cursor = follows_data.get("cursor")
+        if not cursor:
+            break
+    
+    # Filter out users that are already followed
+    unfollowed_users = []
+    for user in standardized_users:
+        if user["did"] not in followed_dids:
+            # Return in same format as input
+            if isinstance(user_list[0], dict):
+                unfollowed_users.append(user)
+            else:
+                # If input was strings, return the handle if available, otherwise the DID
+                unfollowed_users.append(user.get("handle", user["did"]))
+    
+    return unfollowed_users
+
 # --- Example Use Cases ---
 
 """
@@ -494,3 +575,19 @@ for common scenarios in Bluesky network analysis.
 # # Display results
 # print(f"Extracted {len(community_likes)} likes from the community")
 # print(community_likes[["profile_handle", "url"]].head())
+
+# Example 5: Find users that reference user doesn't follow
+# ----------------------------------------------
+# # Get users who liked a post
+# post_url = "https://bsky.app/profile/bsky.app/post/3kl5q7qhny22l"
+# likers = extract_post_likers(post_url, max_likers=50)
+# 
+# # Filter to only users not followed by the reference account
+# reference_user = "your.handle.bsky.social"
+# unfollowed_users = get_unfollowed_users(reference_user, likers)
+# 
+# print(f"Found {len(unfollowed_users)} users who liked the post but aren't followed by {reference_user}")
+# for user in unfollowed_users[:5]:  # Show first 5
+#     print(f"User: {user['handle']} ({user.get('displayName', 'No display name')})")
+# 
+# # You could then follow these users or analyze their content
