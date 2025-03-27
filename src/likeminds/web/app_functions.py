@@ -3,28 +3,43 @@ import os
 # Add the parent directory to path
 #sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from likemind.api.bluesky_api import extract_post_likers, get_multiple_profiles_likes_df
-
+from api.bluesky_api import extract_post_likers, get_multiple_profiles_likes_df
+from api.bluesky_api import extract_post_likers, get_multiple_profiles_likes_df
+from recommendation.simple_embedding_match import get_similar_users_dataframe
 
 
 def get_seed_accounts(url):
     '''
     Return handles of users who liked the linked post.
     '''
-    liker_dict = extract_post_likers(post_url = url, max_likers = 1000, rate_limit_delay = 1)
+    liker_dict = extract_post_likers(post_url = url, max_likers = 100, rate_limit_delay = 1)
     liker_handles = []
     for user in liker_dict:
         if 'handle' in user and user['handle']:
             liker_handles.append(user['handle'])
-    print(liker_handles)
-
-#get_seed_accounts('https://bsky.app/profile/cianodonnell.bsky.social/post/3ll7v4czwzc25')
+    return liker_handles
 
 def likes_from_handles(list_of_handles):
     multiple_likes = get_multiple_profiles_likes_df(
         profile_ids=list_of_handles,
-        total_posts_per_profile=1000,
+        total_posts_per_profile=100,
         include_text=True)
     return multiple_likes[['profile_id','url','text']]
 
-#print(likes_from_handles(['natureneuro.bsky.social','achterbrain.bsky.social']))
+# Example routine to generate matching users
+'''
+seed_accounts = get_seed_accounts('https://bsky.app/profile/coreyspowell.bsky.social/post/3llerbvse722r')
+reference_user = seed_accounts[0]
+likes_df = likes_from_handles(seed_accounts)
+
+
+# Find users similar to the reference user
+similar_users_df = get_similar_users_dataframe(
+    likes_df,                              # Your dataframe with 'profile_id' and 'text' columns
+    reference_user=reference_user,  # The user you want to find matches for
+    top_n=5                          # Number of similar users to return
+)
+
+# Display the results
+print(similar_users_df)'
+'''
