@@ -7,10 +7,60 @@ Original file is located at
     https://colab.research.google.com/drive/1yxhkk6BSYDeLEKNCmXGffl2XcmSxKEc8
 """
 
+def get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile, include_text=False, max_workers=5):
+    """
+    Get likes from multiple Bluesky profiles and return as a combined pandas DataFrame
+
+    Parameters:
+    profile_ids (list): List of Bluesky handles or DIDs
+    total_posts_per_profile (int): Number of posts to extract per profile
+    include_text (bool): Whether to include post text (default False)
+    max_workers (int): Maximum number of concurrent requests (default 5)
+
+    Returns:
+    DataFrame: Pandas DataFrame with liked posts and their details
+    """
+    all_dfs = []
+
+    # Function to process a single profile
+    def process_profile(profile_id):
+        config = {
+            "profile_id": profile_id,
+            "total_posts": total_posts_per_profile,
+            "include_text": include_text,
+            "text_preview_only": True,  # Only need previews for combined view
+            "rate_limit_delay": 1
+        }
+
+        try:
+            df = get_likes_df(config)
+            # Add profile_id column
+            df["profile_id"] = profile_id
+            return df
+        except Exception as e:
+            print(f"Error processing {profile_id}: {e}")
+            return pd.DataFrame()  # Return empty DataFrame on error
+
+    # Process profiles concurrently with rate limiting
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(process_profile, profile_ids))
+
+    # Combine all results
+    combined_df = pd.concat(results, ignore_index=True)
+
+    # Select only the needed columns
+    if include_text:
+        columns = ["profile_id", "uri", "url", "author", "author_handle", "liked_at", "text_preview"]
+    else:
+        columns = ["profile_id", "uri", "url", "author", "author_handle", "liked_at"]
+
+    return combined_df[columns]
+
 import requests
 import json
 import time
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
 def get_did_from_handle(handle):
     """Convert a Bluesky handle to a DID"""
@@ -192,23 +242,34 @@ def get_post_details(post_uris):
 
     return all_posts
 
-config = {
-        "profile_id": "achterbrain.bsky.social",  # Example handle
-        "total_posts": 10,
-        "include_text": True,
-        "text_preview_only": False,
-        "preview_length": 30,
-        "rate_limit_delay": 1
-    }
+# Example for a single profile
+single_config = {
+    "profile_id": "achterbrain.bsky.social",  # Example handle
+    "total_posts": 10,
+    "include_text": True,
+    "text_preview_only": False,
+    "preview_length": 30,
+    "rate_limit_delay": 1
+}
 
-    try:
-        df = get_likes_df(config)
-        print(f"Successfully extracted {len(df)} likes")
-        print("\nDataFrame columns:", df.columns.tolist())
-        print("\nPreview of data:")
-        print(df[["url", "liked_at", "text_preview"]].head())
-    except Exception as e:
-        print(f"Error: {e}")
+try:
+    # Single profile example
+    df = get_likes_df(single_config)
+    print(f"Successfully extracted {len(df)} likes from a single profile")
+    print("\nDataFrame columns:", df.columns.tolist())
+    print("\nPreview of single profile data:")
+    print(df[["url", "liked_at", "text_preview"]].head(3))
+
+    # Multiple profiles example
+    profile_ids = ["achterbrain.bsky.social", "compmotifs.bsky.social"]
+    combined_df = get_multiple_profiles_likes_df(profile_ids, total_posts_per_profile=5, include_text=True)
+    print(f"\nSuccessfully extracted {len(combined_df)} likes from {len(profile_ids)} profiles")
+    print("\nPreview of combined profile data:")
+    print(combined_df[["profile_id", "url", "liked_at"]].head(5))
+except Exception as e:
+    print(f"Error: {e}")
 
 df.iloc[1]['text']
+
+combined_df
 
