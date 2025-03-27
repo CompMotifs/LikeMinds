@@ -28,7 +28,6 @@ skymatch/
 ├── LICENSE                 # License file
 ├── README.md               # Project overview and setup instructions
 ├── .gitignore              # Files/directories to ignore (e.g. __pycache__, venv)
-├── requirements.txt        # Python dependencies including Flask, sklearn-surprise, etc.
 ├── docs/                   # Documentation and design notes
 │   └── branching.md        # Branching strategy and best practices
 ├── notebooks/              # Jupyter notebooks for experiments and data exploration
