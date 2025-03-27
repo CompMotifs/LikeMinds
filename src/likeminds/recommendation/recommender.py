@@ -57,4 +57,4 @@ def rank_users_by_post_overlap(
 
 if __name__ == "__main__":
     df = pd.read_csv("data/user_likes.csv")
-    print(rank_users_by_post_overlap(user_id=10, liked_posts_df=df))
+    print(rank_users_by_post_overlap(profile_id=10, liked_posts_df=df))

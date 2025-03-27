@@ -1,4 +1,4 @@
-user_id,post_id
+profile_id,url
 1,5
 1,11
 1,17
@@ -255820,3 +255820,4 @@ user_id,post_id
 500,9985
 500,9992
 500,9997
+
