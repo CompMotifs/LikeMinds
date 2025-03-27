@@ -10,10 +10,6 @@ Functions:
 - Retrieve information about post likers
 - Process data from multiple profiles in parallel
 
-Requirements:
-- requests
-- pandas
-- concurrent.futures (standard library)
 """
 
 import requests
@@ -417,7 +413,6 @@ def extract_post_likers(post_url: str, max_likers: int = 100, rate_limit_delay: 
     
     return likers[:max_likers]
 
-
 def get_unfollowed_users(reference_user: str, user_list: List[Union[str, Dict[str, str]]]) -> List[Union[str, Dict[str, str]]]:
     """
     Filter a list of users to include only those not followed by the reference user.
@@ -498,6 +493,58 @@ def get_unfollowed_users(reference_user: str, user_list: List[Union[str, Dict[st
                 unfollowed_users.append(user.get("handle", user["did"]))
     
     return unfollowed_users
+
+def check_handle_exists(handle: str) -> Dict[str, Any]:
+    """
+    Check if a Bluesky handle exists and return its information if it does.
+    
+    This function attempts to resolve a handle to a DID, which will only
+    succeed if the handle is valid and exists on Bluesky.
+    
+    Args:
+        handle: The exact Bluesky handle to check (e.g., 'username.bsky.social')
+        
+    Returns:
+        dict: Contains success (bool), did (str, if found), and message (str)
+        
+    Examples:
+        >>> check_handle_exists("bsky.app")
+        {'success': True, 'did': 'did:plc:z72i7hd4cyna6n64n37hfbk5', 'handle': 'bsky.app'}
+        >>> check_handle_exists("nonexistent123456789.bsky.social")
+        {'success': False, 'message': 'Handle not found'}
+    """
+    try:
+        response = requests.get(
+            "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle",
+            params={"handle": handle}
+        )
+        
+        if response.ok:
+            # Handle exists
+            did = response.json().get("did")
+            return {
+                "success": True,
+                "did": did,
+                "handle": handle
+            }
+        elif response.status_code == 400:
+            # Invalid handle format
+            return {
+                "success": False,
+                "message": "Invalid handle format"
+            }
+        else:
+            # Handle likely doesn't exist
+            return {
+                "success": False,
+                "message": "Handle not found"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error checking handle: {str(e)}"
+        }
+
 
 # --- Example Use Cases ---
 
@@ -591,3 +638,23 @@ for common scenarios in Bluesky network analysis.
 #     print(f"User: {user['handle']} ({user.get('displayName', 'No display name')})")
 # 
 # # You could then follow these users or analyze their content
+
+# Example 6: Check if handles exist
+# ----------------------------------------------
+# # Check a single handle
+# result = check_handle_exists("bsky.app")
+# if result["success"]:
+#     print(f"Handle exists! DID: {result['did']}")
+# else:
+#     print(f"Handle check failed: {result['message']}")
+# 
+# # Check multiple handles with exact format
+# handles = ["bsky.app", "bluesky.team", "nonexistent123456.bsky.social", "username"]
+# for handle in handles:
+#     result = check_handle_exists(handle)
+#     if result["success"]:
+#         print(f"{handle} ✓ (DID: {result['did']})")
+#     else:
+#         print(f"{handle} ✗ ({result['message']})")
+# 
+# # Could be used to validate handles before other operations
