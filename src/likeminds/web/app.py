@@ -3,6 +3,10 @@
 import streamlit as st
 import pandas as pd
 
+from likeminds.api.bluesky_api import ( 
+    get_unfollowed_users
+)
+
 from likeminds.web.app_functions import (
     seed_input_check, 
     get_seed_accounts, 
@@ -11,6 +15,10 @@ from likeminds.web.app_functions import (
 
 from likeminds.recommendation.filter_science import (
     filter_posts_by_science
+)
+
+from likeminds.recommendation.recommender import (
+    rank_users_by_post_overlap 
 )
 
 # Import placeholder functions from your modules.
@@ -53,6 +61,11 @@ def main():
         ["Scientific posts", "Music posts", "All posts"]
     )
     
+    matching_option = st.selectbox(
+        "Select a content filter:",
+        ["Like overlap", "Word2Vec", "SBert"]
+    )
+
     top_n = st.number_input("Number of recommendations", min_value=1, max_value=10, value=3)
 
     if st.button("Find Matches") and user_handle:
@@ -73,7 +86,7 @@ def main():
             
 
         # todo remove
-        seed_accounts = seed_accounts[:2]
+        # seed_accounts = seed_accounts[:2]
 
         all_handles = seed_accounts + [user_handle]
 
@@ -84,8 +97,8 @@ def main():
         # st.write(f"Using filter: {filter_option}")
         st.dataframe(likes_df)
 
-        # st.info("Excluding accounts already followed...")
-        
+        # Todo: add filter of users 
+        st.info("Excluding accounts already followed...")
         
         # st.info("Adding user IDs and liked posts for candidate accounts...")
 
@@ -103,6 +116,8 @@ def main():
         removed_df = likes_df[~likes_df['url'].isin(filtered_df['url'])]
 
         st.subheader("Posts Removed by Filtering")
+        
+
         if not removed_df.empty:
             st.write("The following posts were removed:")
             # Display only the "text" column for each removed post
@@ -110,61 +125,19 @@ def main():
         else:
             st.info("No posts were removed based on the current filter.")
 
-        st.info("Generating like fingerprints for user and candidates...")
-
         st.info("Finding closest matching fingerprints...")
-        
-        # Render pandas df at end
 
+        if matching_option == "Like overlap":
+            st.info("Finding like overlap...")
+            reccs = rank_users_by_post_overlap(
+                profile_id=user_handle,
+                liked_posts_df=filtered_df
+            )
 
-        # Continue with the fetching, filtering, and recommendation process.
-        # # Generate user's liked posts DataFrame
-        # user_likes_df = get_user_liked_posts(user_handle)
-        # # Add filtering column (e.g. whether the post is scientific)
-        # user_likes_df = add_is_scientific_column(user_likes_df, text_column="content")
-        # st.write("Your Liked Posts", user_likes_df)
+            st.info(reccs)
+
         
-        # if seed_input:
-        #     seed_input = seed_input.strip()
-        #     # Determine if seed input is a post ID or a list of handles
-        #     if "," in seed_input:
-        #         seed_handles = [h.strip() for h in seed_input.split(",")]
-        #     else:
-        #         # Assume seed input is a post ID; fetch accounts who liked this post
-        #         seed_handles = get_seed_accounts(seed_input)
-            
-        #     # Remove accounts the user already follows
-        #     following = get_user_following(user_handle)
-        #     candidate_handles = [h for h in seed_handles if h not in following]
-        #     st.write("Candidate accounts (after filtering out those you already follow):", candidate_handles)
-            
-        #     # For each candidate, get their liked posts and build a combined DataFrame
-        #     candidate_dfs = []
-        #     for handle in candidate_handles:
-        #         df = get_user_liked_posts(handle)
-        #         df["user_handle"] = handle
-        #         df = add_is_scientific_column(df, text_column="content")
-        #         candidate_dfs.append(df)
-            
-        #     if candidate_dfs:
-        #         all_candidates_df = pd.concat(candidate_dfs, ignore_index=True)
-        #         st.write("Candidate Liked Posts", all_candidates_df)
-                
-        #         # Generate like fingerprints
-        #         user_fp = generate_like_fingerprint(user_likes_df)
-        #         candidate_fps = {}
-        #         for handle in candidate_handles:
-        #             candidate_df = all_candidates_df[all_candidates_df["user_handle"] == handle]
-        #             candidate_fps[handle] = generate_like_fingerprint(candidate_df)
-                
-        #         # Find closest matching fingerprints
-        #         recommendations = find_closest_matches(user_fp, candidate_fps, top_n)
-        #         st.subheader("Top Recommended Accounts")
-        #         st.write(recommendations)
-        #     else:
-        #         st.warning("No candidate accounts found from the provided seed input.")
-        # else:
-        #     st.warning("Please provide a seed post ID or a list of handles to search for matches.")
+
 
 if __name__ == "__main__":
     main()

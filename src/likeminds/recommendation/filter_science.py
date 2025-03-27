@@ -231,6 +231,9 @@ def is_scientific_keywords(text: str) -> bool:
     import re
     science_keywords = [
         r'\bscience\b',
+        r'\blab\b',
+        r'\bpreprint\b',
+        r'\bscience\b',
         r'\bresearch\b',
         r'\bstudy\b',
         r'\bexperiment\b',

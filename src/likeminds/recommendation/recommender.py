@@ -7,15 +7,15 @@ import pandas as pd
 
 
 def rank_users_by_post_overlap(
-    user_id: Hashable,
+    profile_id: Hashable,
     liked_posts_df: pd.DataFrame,
 ) -> List[Hashable]:
     """
     Rank users by the number of overlapping liked posts with the given user.
 
     Args:
-        user_id: The target user to compare against other users.
-        liked_posts_df: DataFrame with columns 'user_id' and 'post_id'.
+        profile_id: The target user to compare against other users.
+        liked_posts_df: DataFrame with columns 'profile_id' and 'url'.
 
     Returns:
         Ranked list of user IDs sorted by most overlapping liked posts.
@@ -24,24 +24,25 @@ def rank_users_by_post_overlap(
         ValueError: If the DataFrame lacks required columns.
     """
     # Validate input DataFrame columns
-    if set(liked_posts_df.columns) != {"user_id", "post_id"}:
-        msg = "DataFrame must contain 'user_id' and 'post_id' columns"
-        raise ValueError(msg)
+    # Todo add check
+    # if len({"profile_id", "url"} - set(liked_posts_df.columns)) == 0:
+    #     msg = "DataFrame must contain 'profile_id' and 'url' columns"
+    #     raise ValueError(msg)
 
-    # Ensure user_id exists in the dataframe
-    if user_id not in liked_posts_df["user_id"].values:
+    # Ensure profile_id exists in the dataframe
+    if profile_id not in liked_posts_df["profile_id"].values:
         return []
 
     # Get the set of posts liked by the target user
     target_user_posts = set(
-        liked_posts_df[liked_posts_df["user_id"] == user_id]["post_id"]
+        liked_posts_df[liked_posts_df["profile_id"] == profile_id]["url"]
     )
 
     # Compute post overlaps for each user
     user_post_overlaps = {}
-    for user, group in liked_posts_df.groupby("user_id"):
-        if user != user_id:
-            other_other_posts = set(group["post_id"])
+    for user, group in liked_posts_df.groupby("profile_id"):
+        if user != profile_id:
+            other_other_posts = set(group["url"])
             user_post_overlaps[user] = len(other_other_posts & target_user_posts) / len(
                 other_other_posts
             )
