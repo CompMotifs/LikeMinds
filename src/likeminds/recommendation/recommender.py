@@ -31,8 +31,11 @@ def rank_users_by_post_overlap(
         msg = "DataFrame must contain 'profile_id' and 'url' columns"
         raise ValueError(msg)
     
+    target_profile = profile_id
     # Convert the target profile to the expected format
-    target_profile = f"{profile_id}.bsky.social"
+    if ".bsky.social" not in profile_id:
+        target_profile = f"{profile_id}.bsky.social"
+        
     
     # Ensure the target profile exists in the DataFrame
     if target_profile not in liked_posts_df["profile_id"].values:

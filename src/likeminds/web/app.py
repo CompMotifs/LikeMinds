@@ -21,6 +21,9 @@ from likeminds.recommendation.recommender import (
     rank_users_by_post_overlap 
 )
 
+from likeminds.recommendation.recommender_word2vec import (
+    get_similar_users_dataframe
+)
 # Import placeholder functions from your modules.
 # These should be implemented in your repo.
 # from src.api.bluesky_api import (
@@ -49,6 +52,9 @@ def main():
     
     # user_handle = st.text_input("Enter your Bluesky handle:", placeholder="@")
     user_handle = st.text_input("Enter your Bluesky handle:", value="", placeholder="@")
+    # todo add check handle exists
+    if ".bsky.social" not in user_handle:
+        user_handle = f"{user_handle}.bsky.social"
 
     seed_input = st.text_area(
         "Enter a seed post URL (one post) or a comma-separated list of handles "
@@ -86,11 +92,14 @@ def main():
             
 
         # todo remove
-        # seed_accounts = seed_accounts[:2]
+        # seed_accounts = seed_accounts[:3]
 
-        all_handles = seed_accounts + [user_handle]
+        all_handles = [user_handle] + seed_accounts
 
         st.info("Fetching all liked posts...")
+
+        st.info(all_handles)
+
         likes_df = likes_from_handles(all_handles)
 
         # Your logic here can use filter_option to determine which filtering function to apply.
@@ -137,6 +146,21 @@ def main():
             if not reccs_df.empty:
                 st.subheader("Recommended Matches (ordered by match score)")
                 st.dataframe(reccs_df)
+            else:
+                st.error("No matching profiles found.")
+            
+        elif matching_option == "Word2Vec":
+            # Call the Word2Vec-based function; it returns a DataFrame with similar users and their similarity scores
+            st.dataframe(filtered_df)
+            similar_users_df = get_similar_users_dataframe(
+                df=filtered_df, 
+                reference_user=user_handle, 
+                top_n=top_n
+            )
+
+            if not similar_users_df.empty:
+                st.subheader("Recommended Matches (Word2Vec/TF-IDF based)")
+                st.dataframe(similar_users_df)
             else:
                 st.error("No matching profiles found.")
 

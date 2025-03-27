@@ -92,7 +92,7 @@ def get_user_interests(df, user_id):
         'click', 'tweet', 'post', 'like', 'share', 'follow', 'dm',
         'retweet', 'reply', 'comment', 'thread', 'timeline', 'feed',
         'pic', 'photo', 'image', 'video', 'bio', 'don', 'didn', 'll',
-        've', 're', 'amp', 'gt', 'lt'
+        've', 're', 'amp', 'gt', 'lt', '10'
     ]
     
     # Combine with English stopwords
@@ -181,6 +181,10 @@ def get_similar_users_dataframe(df, reference_user, top_n=5):
     pandas.DataFrame
         DataFrame with columns for user, similarity score, and top interests
     """
+    # todo work out where this is orinially changed
+    if "bsky.social" not in reference_user:
+        reference_user = f"{reference_user}.bsky.social"
+        
     # Get similar users
     similar_df = find_similar_users(df, reference_user, top_n)
     
