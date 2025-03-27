@@ -3,6 +3,12 @@
 import streamlit as st
 import pandas as pd
 
+from likeminds.web.app_functions import (
+    seed_input_check, 
+    get_seed_accounts, 
+    likes_from_handles
+)
+
 # Import placeholder functions from your modules.
 # These should be implemented in your repo.
 # from src.api.bluesky_api import (
@@ -24,17 +30,6 @@ def main():
         # st.title("LikeMinds")
         st.title("LikeMinds: Find Your Circle")
 
-#     st.markdown(
-#     """
-#     <div style="display: flex; align-items: center;">
-#         <h1 style="margin: 0;">LikeMinds: Find Your Circle</h1>
-#         <img src="data/logo.png" style="margin-left: 20px; width: 100px;" />
-#     </div>
-#     """,
-#     unsafe_allow_html=True
-# )
-        
-        
     st.markdown(
         "Discover potential connections by comparing your liked posts with others, "
         "focusing on content-based filters."
@@ -57,16 +52,20 @@ def main():
     top_n = st.number_input("Number of recommendations", min_value=1, max_value=10, value=3)
 
     if st.button("Find Matches") and user_handle:
+
+        seed_result = seed_input_check(seed_input)
+        if not seed_result["valid"]:
+            st.error(seed_result["error"])
+            st.stop()  # Halt further execution until the user corrects the input
+
         st.info("Fetching your liked posts...")
+
         # Your logic here can use filter_option to determine which filtering function to apply.
         st.write(f"Using filter: {filter_option}")
-        st.info("Generating DataFrame for user's liked posts...")
-        st.info("Checking if seed input is post or handles")
-        seed_is_post = True
-        # function to check
 
-        if seed_is_post:
-            st.info("Identifying accounts who liked the seed post...")
+        st.info("Generating DataFrame for user's liked posts...")
+
+        st.info("Checking if seed input is post or handles")
 
         st.info("Excluding accounts already followed...")
 
@@ -77,6 +76,8 @@ def main():
         st.info("Generating like fingerprints for user and candidates...")
 
         st.info("Finding closest matching fingerprints...")
+        
+        # Render pandas df at end
 
 
         # Continue with the fetching, filtering, and recommendation process.
