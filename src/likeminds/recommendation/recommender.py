@@ -41,8 +41,10 @@ def rank_users_by_post_overlap(
     user_post_overlaps = {}
     for user, group in liked_posts_df.groupby("user_id"):
         if user != user_id:
-            overlapping_posts = len(set(group["post_id"]) & target_user_posts)
-            user_post_overlaps[user] = overlapping_posts
+            other_other_posts = set(group["post_id"])
+            user_post_overlaps[user] = len(other_other_posts & target_user_posts) / len(
+                other_other_posts
+            )
 
     # Sort users by number of overlapping posts in descending order
     return sorted(
