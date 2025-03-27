@@ -4,7 +4,7 @@ import os
 #sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.bluesky_api import extract_post_likers, get_multiple_profiles_likes_df, get_unfollowed_users
-from recommendation.simple_embedding_match import get_similar_users_dataframe
+from likeminds.recommendation.recommender_word2vec import get_similar_users_dataframe
 
 
 def get_seed_accounts(url):
@@ -48,11 +48,11 @@ print(similar_users_df)'
 # Get users who liked a post
 post_url = "https://bsky.app/profile/cianodonnell.bsky.social/post/3ll7v4czwzc25"
 likers = extract_post_likers(post_url, max_likers=50)
- 
+
 # # Filter to only users not followed by the reference account
 reference_user = "compmotifs.bsky.social"
 unfollowed_users = get_unfollowed_users(reference_user, likers)
- 
+
 print(f"Found {len(unfollowed_users)} users who liked the post but aren't followed by {reference_user}")
 for user in unfollowed_users:  # Show first 5
     print(f"User: {user['handle']} ({user.get('displayName', 'No display name')})")
