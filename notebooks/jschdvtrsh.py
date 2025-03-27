@@ -9,6 +9,8 @@ Original file is located at
 
 import requests
 import json
+import time
+import pandas as pd
 
 def get_did_from_handle(handle):
     """Convert a Bluesky handle to a DID"""
@@ -36,48 +38,118 @@ def get_service_endpoint(did):
 
     return did_info["service"][0]["serviceEndpoint"]
 
-def get_likes(profile_id, limit=25, cursor=None):
-    """Get likes from a Bluesky profile"""
+def get_likes_df(config):
+    """
+    Get likes from a Bluesky profile and return as a pandas DataFrame
+
+    Parameters:
+    config (dict): Configuration dictionary with the following keys:
+        - profile_id: Bluesky handle or DID (required)
+        - total_posts: Total number of posts to extract (default 25)
+        - include_text: Whether to include full post text (default True)
+        - rate_limit_delay: Time to wait between requests in seconds (default 1)
+
+    Returns:
+    DataFrame: Pandas DataFrame with liked posts and their details
+    """
+    # Extract config parameters with defaults
+    profile_id = config.get("profile_id")
+    total_posts = config.get("total_posts", 25)
+    include_text = config.get("include_text", True)
+    rate_limit_delay = config.get("rate_limit_delay", 1)
+
+    if not profile_id:
+        raise ValueError("profile_id is required")
+
     # Convert handle to DID if needed
     did = profile_id if profile_id.startswith('did:') else get_did_from_handle(profile_id)
 
     # Get the PDS endpoint
     endpoint = get_service_endpoint(did)
 
-    # Get likes
-    params = {
-        "repo": did,
-        "collection": "app.bsky.feed.like",
-        "limit": limit
-    }
-    if cursor:
-        params["cursor"] = cursor
+    all_likes = []
+    cursor = None
+    limit_per_page = min(100, total_posts)  # Max 100 per API limitation
 
-    response = requests.get(
-        f"{endpoint}/xrpc/com.atproto.repo.listRecords",
-        params=params
-    )
-    if not response.ok:
-        raise Exception(f"Failed to get likes: {response.status_code}")
+    # Paginate through likes until we have enough or there are no more
+    while len(all_likes) < total_posts:
+        # Set up request parameters
+        params = {
+            "repo": did,
+            "collection": "app.bsky.feed.like",
+            "limit": min(limit_per_page, total_posts - len(all_likes))
+        }
+        if cursor:
+            params["cursor"] = cursor
 
-    likes_data = response.json()
+        # Make the request
+        response = requests.get(
+            f"{endpoint}/xrpc/com.atproto.repo.listRecords",
+            params=params
+        )
+        if not response.ok:
+            raise Exception(f"Failed to get likes: {response.status_code}")
 
-    # Extract post URIs from likes
-    post_uris = []
-    for like_record in likes_data.get("records", []):
-        subject = like_record.get("value", {}).get("subject", {})
-        uri = subject.get("uri", "")
-        # Only include app.bsky.feed.post URIs
-        if "/app.bsky.feed.post/" in uri:
-            post_uris.append({
-                "uri": uri,
-                "liked_at": like_record.get("value", {}).get("createdAt")
-            })
+        likes_data = response.json()
 
-    return {
-        "likes": post_uris,
-        "cursor": likes_data.get("cursor")
-    }
+        # Extract post URIs from likes
+        post_uris = []
+        new_likes = []
+
+        for like_record in likes_data.get("records", []):
+            subject = like_record.get("value", {}).get("subject", {})
+            uri = subject.get("uri", "")
+            # Only include app.bsky.feed.post URIs
+            if "/app.bsky.feed.post/" in uri:
+                post_uris.append(uri)
+                post_info = extract_post_info(uri)
+                new_likes.append({
+                    "uri": uri,
+                    "liked_at": like_record.get("value", {}).get("createdAt"),
+                    "url": post_info["url"],
+                    "author": post_info["repo"]
+                })
+
+        # Get post details if requested
+        if include_text and post_uris:
+            posts_details = get_post_details(post_uris)
+
+            # Add post text to like records
+            for like in new_likes:
+                post_detail = next((p for p in posts_details if p["uri"] == like["uri"]), None)
+                if post_detail:
+                    if "record" in post_detail and "text" in post_detail["record"]:
+                        like["text"] = post_detail["record"]["text"]
+                    if "author" in post_detail:
+                        like["author_handle"] = post_detail["author"].get("handle", "")
+                        like["author_display_name"] = post_detail["author"].get("displayName", "")
+                    like["repost_count"] = post_detail.get("repostCount", 0)
+                    like["like_count"] = post_detail.get("likeCount", 0)
+                    like["reply_count"] = post_detail.get("replyCount", 0)
+                else:
+                    like["text"] = ""
+
+        all_likes.extend(new_likes)
+
+        # Check if there are more records
+        cursor = likes_data.get("cursor")
+        if not cursor:
+            break
+
+        # Respect rate limits
+        time.sleep(rate_limit_delay)
+
+    # Trim to the exact number requested
+    all_likes = all_likes[:total_posts]
+
+    # Convert to DataFrame
+    df = pd.DataFrame(all_likes)
+
+    # Add text preview column
+    if include_text and "text" in df.columns:
+        df["text_preview"] = df["text"].apply(lambda x: (x[:20] + "...") if len(x) > 20 else x)
+
+    return df
 
 def extract_post_info(uri):
     """Get basic info about a post from its URI"""
@@ -94,42 +166,39 @@ def get_post_details(post_uris):
     if not post_uris:
         return []
 
-    response = requests.get(
-        "https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts",
-        params={"uris": post_uris}
-    )
-    if not response.ok:
-        raise Exception(f"Failed to get posts: {response.status_code}")
+    # API might have a limit on the number of URIs per request
+    # Split into chunks of 25 if needed
+    max_uris_per_request = 25
+    all_posts = []
 
-    return response.json().get("posts", [])
+    for i in range(0, len(post_uris), max_uris_per_request):
+        chunk = post_uris[i:i + max_uris_per_request]
+        response = requests.get(
+            "https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts",
+            params={"uris": chunk}
+        )
+        if not response.ok:
+            raise Exception(f"Failed to get posts: {response.status_code}")
 
-profile = input("Enter Bluesky handle or DID: ")
+        all_posts.extend(response.json().get("posts", []))
+
+    return all_posts
+
+config = {
+    "profile_id": "achterbrain.bsky.social",  # Example handle
+    "total_posts": 50,
+    "include_text": True,
+    "rate_limit_delay": 1
+}
+
 try:
-    likes_data = get_likes(profile, limit=5)
-    print(f"Found {len(likes_data['likes'])} likes")
-
-    # Get post details to extract text
-    post_uris = [like["uri"] for like in likes_data["likes"]]
-    posts_details = get_post_details(post_uris)
-
-    for like in likes_data["likes"]:
-        post_info = extract_post_info(like["uri"])
-        print(f"Liked on: {like['liked_at']}")
-        print(f"Post URL: {post_info['url']}")
-        print(f"URI: {like['uri']}")
-
-        # Find the corresponding post details
-        post_detail = next((p for p in posts_details if p["uri"] == like["uri"]), None)
-        if post_detail and "record" in post_detail and "text" in post_detail["record"]:
-            post_text = post_detail["record"]["text"]
-            preview = post_text[:20] + "..." if len(post_text) > 20 else post_text
-            print(f"Content preview: {preview}")
-        else:
-            print("Content preview: [Could not retrieve post text]")
-
-        print("-" * 40)
-
-    if likes_data["cursor"]:
-        print("More likes available. Use the cursor for pagination.")
+    df = get_likes_df(config)
+    print(f"Successfully extracted {len(df)} likes")
+    print("\nDataFrame columns:", df.columns.tolist())
+    print("\nPreview of data:")
+    print(df[["url", "liked_at", "text_preview"]].head())
 except Exception as e:
     print(f"Error: {e}")
+
+df
+
