@@ -57,23 +57,23 @@ def identify_blindspot_posts(likes_df: pd.DataFrame, cluster_df: pd.DataFrame, m
     
     return blindspots
 
-# Example usage:
-if __name__ == "__main__":
-    # Suppose you have a DataFrame `likes_df` with the likes data:
-    # Columns: ['profile_id', 'uri', 'liked_at', ...]
-    # For example:
-    data = {
-        "profile_id": ["A", "A", "B", "B", "C", "C", "D", "D"],
-        "uri": ["post1", "post2", "post1", "post2", "post1", "post3", "post1", "post3"]
-    }
-    likes_df = pd.DataFrame(data)
+# # Example usage:
+# if __name__ == "__main__":
+#     # Suppose you have a DataFrame `likes_df` with the likes data:
+#     # Columns: ['profile_id', 'uri', 'liked_at', ...]
+#     # For example:
+#     data = {
+#         "profile_id": ["A", "A", "B", "B", "C", "C", "D", "D"],
+#         "uri": ["post1", "post2", "post1", "post2", "post1", "post3", "post1", "post3"]
+#     }
+#     likes_df = pd.DataFrame(data)
     
-    # Cluster profiles into two groups based on their like patterns
-    cluster_df = cluster_profiles_from_likes(likes_df, n_clusters=2)
-    print("Cluster assignments:")
-    print(cluster_df)
+#     # Cluster profiles into two groups based on their like patterns
+#     cluster_df = cluster_profiles_from_likes(likes_df, n_clusters=2)
+#     print("Cluster assignments:")
+#     print(cluster_df)
     
-    # Identify blind spot posts (posts liked disproportionately by one group)
-    blindspot_posts = identify_blindspot_posts(likes_df, cluster_df, min_diff=1)
-    print("\nBlindspot posts:")
-    print(blindspot_posts)
+#     # Identify blind spot posts (posts liked disproportionately by one group)
+#     blindspot_posts = identify_blindspot_posts(likes_df, cluster_df, min_diff=1)
+#     print("\nBlindspot posts:")
+#     print(blindspot_posts)
