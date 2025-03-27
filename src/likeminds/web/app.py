@@ -13,6 +13,10 @@ from likeminds.recommendation.filter_science import (
     filter_posts_by_science
 )
 
+from likeminds.recommendation.recommender import (
+    rank_users_by_post_overlap 
+)
+
 # Import placeholder functions from your modules.
 # These should be implemented in your repo.
 # from src.api.bluesky_api import (
@@ -53,6 +57,10 @@ def main():
         ["Scientific posts", "Music posts", "All posts"]
     )
     
+    matching_option = st.selectbox(
+        "Select a content filter:",
+        ["Like overlap", "Word2Vec", "SBert"]
+    )
     top_n = st.number_input("Number of recommendations", min_value=1, max_value=10, value=3)
 
     if st.button("Find Matches") and user_handle:
@@ -110,9 +118,15 @@ def main():
         else:
             st.info("No posts were removed based on the current filter.")
 
-        st.info("Generating like fingerprints for user and candidates...")
 
         st.info("Finding closest matching fingerprints...")
+
+        if matching_option == "Like overlap":
+            st.info("Finding like overlap...")
+            rank_users_by_post_overlap(
+                user_id=user_handle,
+                liked_posts_df=filtered_df
+            )
         
         # Render pandas df at end
 
