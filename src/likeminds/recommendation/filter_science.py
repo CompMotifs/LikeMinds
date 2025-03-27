@@ -282,12 +282,11 @@ def filter_posts_by_science(df: pd.DataFrame, keep_scientific: bool = True) -> p
     Returns a subset of the DataFrame containing only scientific posts 
     (if keep_scientific=True), or non-scientific posts otherwise.
     
-    :param df: DataFrame expected to have 'is_scientific' column.
+    :param df: DataFrame 
     :param keep_scientific: True => keep only posts where 'is_scientific' == True.
     :return: Filtered DataFrame.
     """
-    if 'is_scientific' not in df.columns:
-        raise ValueError("DataFrame must have 'is_scientific' column before filtering.")
+    df = add_is_scientific_column(df, "text")
     return df[df['is_scientific'] == keep_scientific]
 
 '''
