@@ -40,6 +40,7 @@ skymatch/
 │   ├── recommendation/     # Modules for recommendation logic using sklearn-surprise
 │   │   ├── __init__.py
 │   │   └── recommender.py  # Implementation of collaborative filtering or other techniques
+│   │   └── filter.py        # Filtering posts
 │   ├── web/                # Web interface using Flask (or another framework)
 │   │   ├── __init__.py
 │   │   └── app.py          # Web app entry point and route definitions
@@ -49,4 +50,3 @@ skymatch/
     ├── test_api.py         # Unit tests for the Bluesky API integration
     ├── test_recommender.py # Tests for the recommendation engine
     └── test_web.py         # Tests for the web interface
-```
