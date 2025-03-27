@@ -22,6 +22,7 @@ LikeMinds is a lightweight web tool that helps researchers on [Bluesky](https://
 
 ## Project Structure 
 
+```bash
 skymatch/
 ├── CONTRIBUTING.md         # Guidelines on branch strategy, code reviews, and merge process
 ├── LICENSE                 # License file
@@ -48,3 +49,4 @@ skymatch/
     ├── test_api.py         # Unit tests for the Bluesky API integration
     ├── test_recommender.py # Tests for the recommendation engine
     └── test_web.py         # Tests for the web interface
+```
