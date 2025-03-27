@@ -1,3 +1,13 @@
+<div style="display: flex; align-items: center;">
+  <div>
+    <img src="data/logo.png" alt="Logo" width="200">
+  </div>
+  <div style="margin-left: 20px;">
+    <h1 style="margin: 0;">LikeMinds</h1>
+    <p style="margin: 0;">People you need to know</p>
+  </div>
+</div>
+
 LikeMinds is a lightweight web tool that helps researchers on [Bluesky](https://bsky.app) discover potential collaborators or competitors by analysing overlapping likes on posts. It recommends 3 users with similar interests—based on mutual likes—but excludes those you're already following.
 
 ## Features
