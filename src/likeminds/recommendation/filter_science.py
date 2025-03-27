@@ -1,3 +1,6 @@
+import re
+import pandas as pd
+
 # Major scientific domains list
 scientific_domains = [
     # Preprint servers
@@ -219,7 +222,74 @@ def is_scientific_url(url):
     except Exception:
         return False
 
-# Test of function
+
+def is_scientific_keywords(text: str) -> bool:
+    """
+    A function to identify whether a text 
+    appears to be scientific in nature based on keywords.
+    """
+    import re
+    science_keywords = [
+        r'\bscience\b',
+        r'\bresearch\b',
+        r'\bstudy\b',
+        r'\bexperiment\b',
+        r'\bdata\b',
+        r'\bphd\b',
+        r'\bpublication\b',
+        r'\bscientific\b',
+    ]
+    pattern = re.compile('|'.join(science_keywords), re.IGNORECASE)
+    return bool(pattern.search(text))
+
+def is_scientific_post(text: str) -> bool:
+    """
+    Determines if a post is scientific by checking:
+    1. If the post text contains scientific keywords.
+    2. If any URLs in the post text are from known scientific domains.
+    """
+    import re
+    
+    # Check for scientific keywords
+    if is_scientific_keywords(text):
+        return True
+    
+    # Extract URLs from the text
+    urls = re.findall(r'https?://\S+', text)
+    for url in urls:
+        if is_scientific_url(url):
+            return True
+            
+    return False
+
+def add_is_scientific_column(df: pd.DataFrame, text_column: str) -> pd.DataFrame:
+    """
+    Adds a boolean column 'is_scientific' to a DataFrame of posts, 
+    based on the content in the specified text column.
+    
+    The function parses the post text for scientific keywords and URLs,
+    then determines if the post is scientific.
+    
+    :param df: DataFrame containing post data.
+    :param text_column: Name of the column in df that stores post text.
+    :return: DataFrame with a new 'is_scientific' column.
+    """
+    df['is_scientific'] = df[text_column].apply(is_scientific_post)
+    return df
+
+def filter_posts_by_science(df: pd.DataFrame, keep_scientific: bool = True) -> pd.DataFrame:
+    """
+    Returns a subset of the DataFrame containing only scientific posts 
+    (if keep_scientific=True), or non-scientific posts otherwise.
+    
+    :param df: DataFrame expected to have 'is_scientific' column.
+    :param keep_scientific: True => keep only posts where 'is_scientific' == True.
+    :return: Filtered DataFrame.
+    """
+    if 'is_scientific' not in df.columns:
+        raise ValueError("DataFrame must have 'is_scientific' column before filtering.")
+    return df[df['is_scientific'] == keep_scientific]
+
 '''
 test_urls = [
     "https://www.nature.com/articles/s41586-021-03819-2",
