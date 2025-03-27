@@ -1,6 +1,8 @@
 import re
 import pandas as pd
 
+# Add filters here - can expand to any post type filter
+
 def is_scientific(text: str) -> bool:
     """
     A placeholder function to identify whether a post's text 
