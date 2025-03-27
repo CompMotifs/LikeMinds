@@ -46,6 +46,7 @@ def main():
         st.title("LikeMinds: Find Your Circle")
 
     st.markdown(
+
         "Discover potential connections by comparing your liked posts with others, "
         "focusing on content-based filters."
     )
