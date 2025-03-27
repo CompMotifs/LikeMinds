@@ -46,7 +46,9 @@ def get_likes_df(config):
     config (dict): Configuration dictionary with the following keys:
         - profile_id: Bluesky handle or DID (required)
         - total_posts: Total number of posts to extract (default 25)
-        - include_text: Whether to include full post text (default True)
+        - include_text: Whether to include post text (default True)
+        - text_preview_only: If True, only include preview in DataFrame (default False)
+        - preview_length: Number of characters for text preview (default 20)
         - rate_limit_delay: Time to wait between requests in seconds (default 1)
 
     Returns:
@@ -56,6 +58,8 @@ def get_likes_df(config):
     profile_id = config.get("profile_id")
     total_posts = config.get("total_posts", 25)
     include_text = config.get("include_text", True)
+    text_preview_only = config.get("text_preview_only", False)
+    preview_length = config.get("preview_length", 20)
     rate_limit_delay = config.get("rate_limit_delay", 1)
 
     if not profile_id:
@@ -147,7 +151,11 @@ def get_likes_df(config):
 
     # Add text preview column
     if include_text and "text" in df.columns:
-        df["text_preview"] = df["text"].apply(lambda x: (x[:20] + "...") if len(x) > 20 else x)
+        df["text_preview"] = df["text"].apply(lambda x: (x[:preview_length] + "...") if len(x) > preview_length else x)
+
+        # If preview only, drop the full text column
+        if text_preview_only:
+            df = df.drop(columns=["text"])
 
     return df
 
@@ -185,20 +193,22 @@ def get_post_details(post_uris):
     return all_posts
 
 config = {
-    "profile_id": "achterbrain.bsky.social",  # Example handle
-    "total_posts": 50,
-    "include_text": True,
-    "rate_limit_delay": 1
-}
+        "profile_id": "achterbrain.bsky.social",  # Example handle
+        "total_posts": 10,
+        "include_text": True,
+        "text_preview_only": False,
+        "preview_length": 30,
+        "rate_limit_delay": 1
+    }
 
-try:
-    df = get_likes_df(config)
-    print(f"Successfully extracted {len(df)} likes")
-    print("\nDataFrame columns:", df.columns.tolist())
-    print("\nPreview of data:")
-    print(df[["url", "liked_at", "text_preview"]].head())
-except Exception as e:
-    print(f"Error: {e}")
+    try:
+        df = get_likes_df(config)
+        print(f"Successfully extracted {len(df)} likes")
+        print("\nDataFrame columns:", df.columns.tolist())
+        print("\nPreview of data:")
+        print(df[["url", "liked_at", "text_preview"]].head())
+    except Exception as e:
+        print(f"Error: {e}")
 
-df
+df.iloc[1]['text']
 
