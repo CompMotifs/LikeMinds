@@ -17,14 +17,31 @@ import pandas as pd
 # )
 
 def main():
-    st.title("LikeMinds: Find Your Circle")
+    col1, col2 = st.columns([0.3, 0.7])
+    with col1:
+        st.image("data/logo.png")
+    with col2:
+        # st.title("LikeMinds")
+        st.title("LikeMinds: Find Your Circle")
+
+#     st.markdown(
+#     """
+#     <div style="display: flex; align-items: center;">
+#         <h1 style="margin: 0;">LikeMinds: Find Your Circle</h1>
+#         <img src="data/logo.png" style="margin-left: 20px; width: 100px;" />
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )
+        
+        
     st.markdown(
         "Discover potential connections by comparing your liked posts with others, "
         "focusing on content-based filters."
     )
     
-    # Get user input
-    user_handle = st.text_input("Enter your Bluesky handle:")
+    # user_handle = st.text_input("Enter your Bluesky handle:", placeholder="@")
+    user_handle = st.text_input("Enter your Bluesky handle:", value="", placeholder="@")
 
     seed_input = st.text_area(
         "Enter a seed post URL (one post) or a comma-separated list of handles "
