@@ -20,3 +20,31 @@ LikeMinds is a lightweight web tool that helps researchers on [Bluesky](https://
 - build environment `uv sync`
 
 
+## Project Structure 
+
+skymatch/
+├── CONTRIBUTING.md         # Guidelines on branch strategy, code reviews, and merge process
+├── LICENSE                 # License file
+├── README.md               # Project overview and setup instructions
+├── .gitignore              # Files/directories to ignore (e.g. __pycache__, venv)
+├── requirements.txt        # Python dependencies including Flask, sklearn-surprise, etc.
+├── docs/                   # Documentation and design notes
+│   └── branching.md        # Branching strategy and best practices
+├── notebooks/              # Jupyter notebooks for experiments and data exploration
+├── src/                    # Main source code
+│   ├── __init__.py
+│   ├── api/                # Modules for Bluesky API integration
+│   │   ├── __init__.py
+│   │   └── bluesky_api.py  # Functions to interact with the Bluesky API
+│   ├── recommendation/     # Modules for recommendation logic using sklearn-surprise
+│   │   ├── __init__.py
+│   │   └── recommender.py  # Implementation of collaborative filtering or other techniques
+│   ├── web/                # Web interface using Flask (or another framework)
+│   │   ├── __init__.py
+│   │   └── app.py          # Web app entry point and route definitions
+│   └── config.py           # Configuration settings (e.g. API keys, model parameters)
+└── tests/                  # Automated tests for each module
+    ├── __init__.py
+    ├── test_api.py         # Unit tests for the Bluesky API integration
+    ├── test_recommender.py # Tests for the recommendation engine
+    └── test_web.py         # Tests for the web interface
