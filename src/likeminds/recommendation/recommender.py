@@ -24,9 +24,10 @@ def rank_users_by_post_overlap(
         ValueError: If the DataFrame lacks required columns.
     """
     # Validate input DataFrame columns
-    if set(liked_posts_df.columns) != {"profile_id", "url"}:
-        msg = "DataFrame must contain 'profile_id' and 'url' columns"
-        raise ValueError(msg)
+    # Todo add check
+    # if len({"profile_id", "url"} - set(liked_posts_df.columns)) == 0:
+    #     msg = "DataFrame must contain 'profile_id' and 'url' columns"
+    #     raise ValueError(msg)
 
     # Ensure profile_id exists in the dataframe
     if profile_id not in liked_posts_df["profile_id"].values:
